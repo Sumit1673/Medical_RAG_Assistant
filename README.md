@@ -1,4 +1,4 @@
-# 🧠 Advanced RAG Knowledge Assistant
+# 🧠 Medical RAG Assistant
 
 [![CI](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/ci.yml/badge.svg)](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/ci.yml)
 [![CD](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/cd.yml/badge.svg)](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/cd.yml)
@@ -6,7 +6,8 @@
 [![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A **production-grade** Retrieval-Augmented Generation (RAG) system that upgrades a basic vector-search pipeline into an advanced, multi-stage architecture — using the same patterns employed by Netflix, Amazon, and Pinecone at scale.
+A **production-grade** Retrieval-Augmented Generation (RAG) system that upgrades a basic vector-search pipeline into an advanced, multi-stage architecture — using the same patterns employed by Netflix, Amazon, and Pinecone at scale. For dataset I have created some sample 
+medical dataset.
 
 ---
 

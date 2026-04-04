@@ -140,5 +140,3 @@ Automated quality measurement using three key metrics:
 
 
 ---
-
-*Upgrade from [Knowledge Assistant RAG v1](../README.md) — demonstrating production RAG patterns.*

@@ -1,0 +1,54 @@
+paths:
+  data_dir: "dataset/medical/"
+  vector_store_dir: "vector_store/"
+
+embedding:
+  provider: "huggingface"           # or "openai"
+  model_name: "BAAI/bge-small-en-v1.5"
+  # For OpenAI:
+  # provider: "openai"
+  # model_name: "text-embedding-3-small"
+  device: "cpu"
+  normalize_embeddings: true
+
+llm:
+  provider: "ollama"                # or "openai"
+  model_name: "mistral"
+  temperature: 0.2
+  max_tokens: 1024
+  # For Ollama:
+  model_base_url: "http://localhost:11434"
+  # For OpenAI:
+  # provider: "openai"
+  # model_name: "gpt-4o"
+
+vector_store:
+  type: "ChromaClient"
+  chroma_server_url: "http://localhost:8001"
+  collection_name: "medical_rag"
+
+retrieval:
+  dense_top_k: 10
+  sparse_top_k: 10
+  final_top_k: 5
+  enable_query_rewriting: true
+  enable_reranking: true
+
+reranker:
+  model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  top_n: 5
+
+ingestion:
+  chunk_size: 512
+  chunk_overlap: 64
+  supported_extensions: [".txt", ".pdf", ".md", ".csv"]
+  chunking_strategy: "recursive"    # or "semantic"
+
+evaluation:
+  test_data_path: "dataset/eval_samples.json"
+  metrics: ["faithfulness", "answer_relevancy", "context_precision"]
+  output_path: "evaluation_results.json"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"

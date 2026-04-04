@@ -1,7 +1,7 @@
 # 🧠 Medical RAG Assistant
 
-[![CI](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/ci.yml/badge.svg)](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/ci.yml)
-[![CD](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/cd.yml/badge.svg)](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/cd.yml)
+[![CI](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/ci.yml/badge.svg)](https://github.com/Sumit1673/medical-rag-assistant/actions/workflows/ci.yml)
+[![CD](https://github.com/Sumit1673/advanced-rag-system/actions/workflows/cd.yml/badge.svg)](https://github.com/Sumit1673/medical-rag-assistant/actions/workflows/cd.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11-blue)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

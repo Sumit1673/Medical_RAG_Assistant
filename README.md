@@ -137,31 +137,6 @@ Automated quality measurement using three key metrics:
 
 ## 📁 Project Structure
 
-```
-medical-rag-assistant/
-├── .github/workflows/
-│   ├── ci.yml          # Lint + multi-Python tests + Docker build check
-│   └── cd.yml          # Build & push GHCR image + GitHub Release on tags
-│
-├── src/rag_assistant/
-│   ├── core/
-│   │   ├── retriever.py          ⭐ Hybrid BM25 + Dense + RRF fusion
-│   │   ├── reranker.py           ⭐ Cross-encoder reranking
-│   │   ├── query_handler.py      ⭐ Full advanced pipeline + streaming
-│   │   ├── llm_handler.py        ⭐ OpenAI GPT-4o + Ollama + async stream
-│   │   ├── embedding_generator.py   OpenAI + HuggingFace
-│   │   ├── document_loader.py       PDF / TXT / CSV / MD / DOCX
-│   │   ├── document_splitter.py     Recursive + Semantic chunking
-│   │   └── vector_store_manager.py  ChromaDB client
-│   ├── evaluation/
-│   │   └── ragas_eval.py         ⭐ RAGAS metrics pipeline
-│   ├── pipeline/
-│   │   └── ingestion.py             Full offline ingestion orchestrator
-│   └── utils/
-│       └── config_loader.py         YAML config parser
-│
-
-```
 
 
 ---

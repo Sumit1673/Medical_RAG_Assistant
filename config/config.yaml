@@ -12,8 +12,8 @@ embedding:
   normalize_embeddings: true
 
 llm:
-  provider: "ollama"                # or "openai"
-  model_name: "mistral"
+  provider: "ollama"
+  model_name: "gemma4:e4b"
   temperature: 0.2
   max_tokens: 1024
   # For Ollama:
@@ -28,15 +28,17 @@ vector_store:
   collection_name: "medical_rag"
 
 retrieval:
-  dense_top_k: 10
-  sparse_top_k: 10
-  final_top_k: 5
+  dense_top_k: 10       # broad initial retrieval — always top_k
+  sparse_top_k: 10      # broad initial retrieval — always top_k
+  final_top_k: 5        # fallback when top_p is not set
+  # top_p: 0.85         # nucleus threshold for RRF output (uncomment to enable)
   enable_query_rewriting: true
   enable_reranking: true
 
 reranker:
   model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
-  top_n: 5
+  top_n: 5              # fallback when top_p is not set
+  # top_p: 0.90         # nucleus threshold over softmax of reranker scores (uncomment to enable)
 
 ingestion:
   chunk_size: 512

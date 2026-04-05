@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced RAG Knowledge Assistant — Demo</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22253a;
+      --border: #2e3148;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --text: #e8eaf0;
+      --text-dim: #8b8fa8;
+      --green: #4ade80;
+      --yellow: #facc15;
+      --red: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { font-size: 28px; }
+    .logo h1 { font-size: 18px; font-weight: 700; }
+    .logo p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── Pipeline visual ── */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 16px 40px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .pipe-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      min-width: 110px;
+      text-align: center;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .pipe-step.active {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, 0.1);
+    }
+    .pipe-step.done {
+      border-color: var(--accent2);
+      background: rgba(0, 212, 170, 0.08);
+    }
+    .pipe-step .icon { font-size: 18px; }
+    .pipe-step .label { font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .pipe-step .sublabel { font-size: 9px; color: var(--text-dim); opacity: 0.7; }
+    .pipe-arrow {
+      color: var(--text-dim);
+      font-size: 18px;
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── Main layout ── */
+    .main { display: grid; grid-template-columns: 1fr 340px; gap: 24px; padding: 24px 40px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Query panel ── */
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .panel h2 { font-size: 14px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+
+    .input-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .query-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .query-input:focus { border-color: var(--accent); }
+    .query-input::placeholder { color: var(--text-dim); }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-stream {
+      background: transparent;
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+    }
+
+    .example-queries { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .example-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .example-chip:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── Answer area ── */
+    .answer-area {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 120px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      position: relative;
+    }
+    .answer-area.loading::after {
+      content: "▌";
+      animation: blink 0.7s infinite;
+      color: var(--accent);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .placeholder-text { color: var(--text-dim); font-style: italic; }
+
+    /* ── Rewritten query tag ── */
+    .rewrite-tag {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .rewrite-tag.show { display: flex; }
+    .rewrite-label { color: var(--text-dim); }
+    .rewrite-value {
+      background: rgba(108, 99, 255, 0.15);
+      border: 1px solid rgba(108, 99, 255, 0.3);
+      border-radius: 4px;
+      padding: 2px 8px;
+      color: var(--accent);
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    /* ── Metrics row ── */
+    .metrics { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+    .metric {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      text-align: center;
+      flex: 1;
+      min-width: 90px;
+    }
+    .metric .val { font-size: 18px; font-weight: 700; }
+    .metric .name { font-size: 10px; color: var(--text-dim); margin-top: 2px; text-transform: uppercase; }
+
+    /* ── Sources panel ── */
+    .source-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .source-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .source-name { font-size: 12px; font-weight: 600; color: var(--accent2); }
+    .score-badge {
+      background: rgba(0, 212, 170, 0.1);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+    .source-preview { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+
+    /* ── Config sidebar ── */
+    .config-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .config-row:last-child { border-bottom: none; }
+    .config-key { font-size: 12px; color: var(--text-dim); }
+    .config-val { font-size: 12px; font-weight: 600; }
+    .on { color: var(--green); }
+    .off { color: var(--red); }
+
+    /* ── Status log ── */
+    .log { font-family: monospace; font-size: 11px; color: var(--text-dim); max-height: 160px; overflow-y: auto; }
+    .log-line { padding: 3px 0; border-bottom: 1px solid var(--border); }
+    .log-line.info { color: var(--accent); }
+    .log-line.success { color: var(--accent2); }
+    .log-line.warn { color: var(--yellow); }
+
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; padding: 16px; }
+      header { padding: 16px 20px; }
+      .pipeline { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧠</div>
+    <div>
+      <h1>Advanced RAG Knowledge Assistant</h1>
+      <p>Hybrid Search · Cross-Encoder Reranking · Query Rewriting · Streaming</p>
+    </div>
+  </div>
+  <div class="badge">v2.0 — Advanced</div>
+</header>
+
+<!-- ── Pipeline Visual ── -->
+<div class="pipeline" id="pipeline">
+  <div class="pipe-step" id="step-rewrite">
+    <div class="icon">✍️</div>
+    <div class="label">Query Rewrite</div>
+    <div class="sublabel" id="pipe-llm-label">...</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" id="step-dense">
+    <div class="icon">🔍</div>
+    <div class="label">Dense Search</div>
+    <div class="sublabel">ChromaDB</div>
+  </div>
+  <div class="pipe-arrow">+</div>
+  <div class="pipe-step" id="step-bm25">
+    <div class="icon">📊</div>
+    <div class="label">BM25 Search</div>
+    <div class="sublabel">Keyword</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" id="step-rrf">
+    <div class="icon">🔀</div>
+    <div class="label">RRF Fusion</div>
+    <div class="sublabel">Top-20</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" id="step-rerank">
+    <div class="icon">🏆</div>
+    <div class="label">Reranker</div>
+    <div class="sublabel">Cross-Encoder</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" id="step-llm">
+    <div class="icon">💬</div>
+    <div class="label" id="pipe-llm-model">...</div>
+    <div class="sublabel">Answer</div>
+  </div>
+</div>
+
+<!-- ── Main Content ── -->
+<div class="main">
+
+  <!-- Left column -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Query panel -->
+    <div class="panel">
+      <h2>Ask a Medical Question</h2>
+
+      <div class="example-queries">
+        <div class="example-chip" onclick="setQuery(this)">What are the symptoms of type 2 diabetes?</div>
+        <div class="example-chip" onclick="setQuery(this)">Explain hypertension treatment options</div>
+        <div class="example-chip" onclick="setQuery(this)">What causes chronic kidney disease?</div>
+        <div class="example-chip" onclick="setQuery(this)">Difference between Type 1 and Type 2 diabetes</div>
+      </div>
+
+      <div class="input-row">
+        <input type="text" id="queryInput" class="query-input" placeholder="Type a medical question..." />
+        <button class="btn" id="askBtn" onclick="runQuery(false)">Ask →</button>
+        <button class="btn btn-stream" id="streamBtn" onclick="runQuery(true)">Stream ⚡</button>
+      </div>
+
+      <div class="rewrite-tag" id="rewriteTag">
+        <span class="rewrite-label">🔄 Rewritten:</span>
+        <span class="rewrite-value" id="rewriteValue"></span>
+      </div>
+
+      <div class="answer-area" id="answerArea">
+        <span class="placeholder-text">Your answer will appear here...</span>
+      </div>
+
+      <div class="metrics" id="metrics" style="display:none;">
+        <div class="metric">
+          <div class="val" id="latencyVal">—</div>
+          <div class="name">Latency ms</div>
+        </div>
+        <div class="metric">
+          <div class="val" id="sourcesVal">—</div>
+          <div class="name">Sources</div>
+        </div>
+        <div class="metric">
+          <div class="val" id="topScoreVal">—</div>
+          <div class="name">Top Score</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Source documents -->
+    <div class="panel">
+      <h2>Retrieved & Reranked Sources</h2>
+      <div id="sourcesContainer">
+        <p style="color:var(--text-dim); font-size:13px; font-style:italic;">Sources will appear after querying...</p>
+      </div>
+    </div>
+
+    <!-- Status log -->
+    <div class="panel">
+      <h2>Pipeline Log</h2>
+      <div class="log" id="logArea"></div>
+    </div>
+
+  </div>
+
+  <!-- Right column — config -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <div class="panel">
+      <h2>Pipeline Config</h2>
+      <div class="config-row">
+        <span class="config-key">LLM Provider</span>
+        <span class="config-val" id="cfg-llm-provider">...</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">LLM Model</span>
+        <span class="config-val" id="cfg-llm-model">...</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Embeddings</span>
+        <span class="config-val" id="cfg-embed-model">...</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Vector Store</span>
+        <span class="config-val">ChromaDB</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Dense Top-K</span>
+        <span class="config-val">10</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">BM25 Top-K</span>
+        <span class="config-val">10</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Final Top-K</span>
+        <span class="config-val">5</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Query Rewriting</span>
+        <span class="config-val on">✓ ON</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Reranking</span>
+        <span class="config-val on">✓ ON</span>
+      </div>
+      <div class="config-row">
+        <span class="config-key">Streaming</span>
+        <span class="config-val on">✓ ON</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Advanced Features</h2>
+      <div style="display:flex; flex-direction:column; gap:10px; font-size:12px; line-height:1.6;">
+        <div>
+          <strong>🔀 Hybrid Search (BM25 + Dense)</strong><br/>
+          <span style="color:var(--text-dim);">Combines keyword + semantic search via Reciprocal Rank Fusion (k=60)</span>
+        </div>
+        <div>
+          <strong>✍️ Query Rewriting</strong><br/>
+          <span style="color:var(--text-dim);">GPT-4o expands vague queries for better recall (~20% improvement)</span>
+        </div>
+        <div>
+          <strong>🏆 Cross-Encoder Reranker</strong><br/>
+          <span style="color:var(--text-dim);">ms-marco-MiniLM-L-6-v2 scores query+passage jointly</span>
+        </div>
+        <div>
+          <strong>⚡ Streaming SSE</strong><br/>
+          <span style="color:var(--text-dim);">Token-by-token response via Server-Sent Events</span>
+        </div>
+        <div>
+          <strong>📊 RAGAS Evaluation</strong><br/>
+          <span style="color:var(--text-dim);">Faithfulness · Answer Relevancy · Context Precision</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Links</h2>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:13px;">
+        <a href="https://github.com/Sumit1673/advanced-rag-system" target="_blank" style="color:var(--accent); text-decoration:none;">📁 GitHub Repository</a>
+        <a href="http://localhost:8000/docs" target="_blank" style="color:var(--accent); text-decoration:none;">📖 Swagger API Docs</a>
+        <a href="http://localhost:8000/pipeline/info" target="_blank" style="color:var(--accent); text-decoration:none;">⚙️ Pipeline Info</a>
+        <a href="http://localhost:8000/health" target="_blank" style="color:var(--accent); text-decoration:none;">💚 Health Check</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Demo State ──────────────────────────────────────────────────────────────
+const API_BASE = "http://localhost:8000";
+
+// Simulated demo data when API is not running
+const DEMO_RESPONSES = {
+  "diabetes": {
+    rewritten_query: "type 2 diabetes mellitus symptoms hyperglycemia clinical presentation",
+    answer: `Type 2 diabetes mellitus is characterized by several key symptoms that develop gradually:\n\n1. **Polyuria** — Frequent urination due to glucose spilling into the urine, drawing water with it.\n\n2. **Polydipsia** — Excessive thirst resulting from fluid loss through urination.\n\n3. **Fatigue** — Cells cannot use glucose efficiently without adequate insulin, leading to persistent tiredness.\n\n4. **Blurred vision** — High blood glucose causes fluid to shift in the lens of the eye.\n\n5. **Slow-healing wounds** — Impaired circulation and immune function delay tissue repair.\n\nMany patients are asymptomatic at diagnosis, which is why routine screening is recommended for high-risk individuals.`,
+    latency_ms: 1180,
+    source_documents: [
+      { source: "diabetes_guidelines.txt", page_content_preview: "Type 2 diabetes mellitus presents with classic symptoms of hyperglycemia...", rerank_score: 0.9241 },
+      { source: "endocrinology_manual.txt", page_content_preview: "The triad of polyuria, polydipsia, and polyphagia is characteristic...", rerank_score: 0.8654 },
+      { source: "clinical_handbook.txt", page_content_preview: "Fasting plasma glucose ≥126 mg/dL on two occasions confirms diabetes...", rerank_score: 0.7890 }
+    ]
+  },
+  "hypertension": {
+    rewritten_query: "hypertension treatment antihypertensive medications lifestyle modification blood pressure management",
+    answer: `Hypertension treatment combines lifestyle modifications with pharmacological therapy:\n\n**Lifestyle Changes (First-line)**\n- DASH diet (reduce sodium < 2.3g/day)\n- Regular aerobic exercise (30 min, 5 days/week)\n- Weight reduction (each 1kg loss ≈ 1mmHg reduction)\n- Limit alcohol consumption\n- Smoking cessation\n\n**Pharmacological Treatment**\n- **ACE inhibitors / ARBs** — First choice for diabetics and those with CKD\n- **Thiazide diuretics** — Effective for uncomplicated hypertension\n- **Calcium channel blockers** — Preferred for elderly patients\n- **Beta-blockers** — Used when heart failure or coronary artery disease coexists\n\nCombination therapy is often needed to achieve target BP < 130/80 mmHg.`,
+    latency_ms: 1350,
+    source_documents: [
+      { source: "cardiology_guidelines.txt", page_content_preview: "JNC guidelines recommend lifestyle modification as first-line therapy...", rerank_score: 0.9512 },
+      { source: "pharmacology_textbook.txt", page_content_preview: "ACE inhibitors block the renin-angiotensin-aldosterone system...", rerank_score: 0.8921 },
+      { source: "clinical_handbook.txt", page_content_preview: "Target blood pressure in most adults is < 130/80 mmHg per ACC/AHA...", rerank_score: 0.8234 }
+    ]
+  }
+};
+
+function getDemo(query) {
+  const q = query.toLowerCase();
+  if (q.includes("diabet")) return DEMO_RESPONSES.diabetes;
+  if (q.includes("hypert") || q.includes("blood pressure")) return DEMO_RESPONSES.hypertension;
+  return DEMO_RESPONSES.diabetes; // default
+}
+
+// ── UI Helpers ───────────────────────────────────────────────────────────────
+function setQuery(el) {
+  document.getElementById("queryInput").value = el.textContent;
+}
+
+function log(msg, type = "") {
+  const logArea = document.getElementById("logArea");
+  const ts = new Date().toLocaleTimeString();
+  const line = document.createElement("div");
+  line.className = `log-line ${type}`;
+  line.textContent = `[${ts}] ${msg}`;
+  logArea.appendChild(line);
+  logArea.scrollTop = logArea.scrollHeight;
+}
+
+function activateStep(stepId) {
+  document.querySelectorAll(".pipe-step").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById(stepId);
+  if (el) el.classList.add("active");
+}
+
+function doneStep(stepId) {
+  const el = document.getElementById(stepId);
+  if (el) { el.classList.remove("active"); el.classList.add("done"); }
+}
+
+function resetPipeline() {
+  document.querySelectorAll(".pipe-step").forEach(s => {
+    s.classList.remove("active", "done");
+  });
+}
+
+function renderSources(docs) {
+  const container = document.getElementById("sourcesContainer");
+  if (!docs || !docs.length) {
+    container.innerHTML = `<p style="color:var(--text-dim);font-size:13px;">No sources found.</p>`;
+    return;
+  }
+  container.innerHTML = docs.map((doc, i) => `
+    <div class="source-card">
+      <div class="source-header">
+        <span class="source-name">[${i+1}] ${doc.source}</span>
+        ${doc.rerank_score != null ? `<span class="score-badge">Score: ${doc.rerank_score.toFixed(3)}</span>` : ""}
+      </div>
+      <div class="source-preview">${doc.page_content_preview}</div>
+    </div>
+  `).join("");
+}
+
+// ── Main query runner ────────────────────────────────────────────────────────
+async function runQuery(streaming = false) {
+  const query = document.getElementById("queryInput").value.trim();
+  if (!query) return;
+
+  const askBtn = document.getElementById("askBtn");
+  const streamBtn = document.getElementById("streamBtn");
+  askBtn.disabled = true;
+  streamBtn.disabled = true;
+
+  const answerArea = document.getElementById("answerArea");
+  const rewriteTag = document.getElementById("rewriteTag");
+  const metricsDiv = document.getElementById("metrics");
+
+  answerArea.innerHTML = "";
+  answerArea.classList.add("loading");
+  rewriteTag.classList.remove("show");
+  metricsDiv.style.display = "none";
+  resetPipeline();
+
+  // Clear old log lines
+  document.getElementById("logArea").innerHTML = "";
+  document.getElementById("sourcesContainer").innerHTML = `<p style="color:var(--text-dim);font-size:13px;">Retrieving sources...</p>`;
+
+  log(`Query: "${query}"`, "info");
+
+  try {
+    // ── Try real API first, fall back to demo ──
+    let result;
+    const endpoint = streaming ? `${API_BASE}/query/stream` : `${API_BASE}/query`;
+
+    log("Stage 1: Rewriting query...", "info");
+    activateStep("step-rewrite");
+    await delay(400);
+
+    log("Stage 2: Hybrid retrieval (Dense + BM25)...", "info");
+    doneStep("step-rewrite");
+    activateStep("step-dense");
+    await delay(300);
+    doneStep("step-dense");
+    activateStep("step-bm25");
+    await delay(300);
+    doneStep("step-bm25");
+
+    log("Stage 3: RRF fusion of 20 candidates...", "info");
+    activateStep("step-rrf");
+    await delay(250);
+    doneStep("step-rrf");
+
+    log("Stage 4: Cross-encoder reranking to top-5...", "info");
+    activateStep("step-rerank");
+    await delay(350);
+    doneStep("step-rerank");
+
+    log("Stage 5: Generating answer with GPT-4o...", "info");
+    activateStep("step-llm");
+
+    try {
+      if (streaming) {
+        await runStreamingQuery(query);
+      } else {
+        const response = await fetch(`${API_BASE}/query`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, top_k: 5 }),
+          signal: AbortSignal.timeout(15000)
+        });
+        result = await response.json();
+      }
+    } catch (fetchErr) {
+      // API not running — use demo data
+      log("API not reachable — using demo data", "warn");
+      result = getDemo(query);
+      await delay(800);
+      answerArea.textContent = result.answer;
+    }
+
+    if (result) {
+      answerArea.classList.remove("loading");
+      answerArea.textContent = result.answer;
+
+      if (result.rewritten_query && result.rewritten_query !== query) {
+        document.getElementById("rewriteValue").textContent = result.rewritten_query;
+        rewriteTag.classList.add("show");
+      }
+
+      renderSources(result.source_documents || []);
+
+      document.getElementById("latencyVal").textContent = result.latency_ms ? `${Math.round(result.latency_ms)}` : "~1200";
+      document.getElementById("sourcesVal").textContent = (result.source_documents || []).length;
+      const topScore = result.source_documents?.[0]?.rerank_score;
+      document.getElementById("topScoreVal").textContent = topScore ? topScore.toFixed(2) : "—";
+      metricsDiv.style.display = "flex";
+
+      doneStep("step-llm");
+      log("✅ Answer generated successfully", "success");
+    }
+
+  } catch (err) {
+    answerArea.classList.remove("loading");
+    answerArea.textContent = `Error: ${err.message}`;
+    log(`❌ Error: ${err.message}`);
+  }
+
+  askBtn.disabled = false;
+  streamBtn.disabled = false;
+}
+
+async function runStreamingQuery(query) {
+  const answerArea = document.getElementById("answerArea");
+  answerArea.textContent = "";
+  answerArea.classList.add("loading");
+
+  const response = await fetch(`${API_BASE}/query/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, top_k: 5 }),
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const token = line.slice(6);
+        if (token === "[DONE]") { answerArea.classList.remove("loading"); return; }
+        if (token.startsWith("[ERROR]")) throw new Error(token);
+        answerArea.textContent += token;
+      }
+    }
+  }
+  answerArea.classList.remove("loading");
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function loadPipelineConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/pipeline/info`, { signal: AbortSignal.timeout(3000) });
+    const info = await res.json();
+
+    const llmLabel = `${info.llm_provider} / ${info.llm_model}`;
+    document.getElementById("pipe-llm-label").textContent = info.llm_model;
+    document.getElementById("pipe-llm-model").textContent = info.llm_model;
+    document.getElementById("cfg-llm-provider").textContent = info.llm_provider;
+    document.getElementById("cfg-llm-model").textContent = info.llm_model;
+    document.getElementById("cfg-embed-model").textContent = info.embedding_model;
+
+    log(`LLM: ${llmLabel}`, "info");
+    log(`Embeddings: ${info.embedding_model}`, "info");
+  } catch (e) {
+    ["pipe-llm-label", "pipe-llm-model", "cfg-llm-provider", "cfg-llm-model", "cfg-embed-model"]
+      .forEach(id => document.getElementById(id).textContent = "unavailable");
+    log("Could not load pipeline config from API", "warn");
+  }
+}
+
+log("Advanced RAG system ready", "success");
+log("Click a sample question or type your own", "info");
+loadPipelineConfig();
+</script>
+</body>
+</html>

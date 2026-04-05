@@ -124,7 +124,13 @@ This improves recall by ~15-25% (Amazon Kendra research).
 ### 3. Cross-Encoder Reranking
 Standard bi-encoders score query and document independently. Cross-encoders process the *(query, document)* pair **jointly**, producing far more accurate relevance scores. Applied only on the top-20 candidates for efficiency — the same two-stage pattern used by Netflix.
 
-
+### 4. Streaming Responses (SSE)
+```javascript
+const es = new EventSource("/query/stream");
+es.onmessage = ({ data }) => {
+  if (data === "[DONE]") return es.close();
+  document.getElementById("output").textContent += data;
+};
 ```
 
 ### 5. RAGAS Evaluation
@@ -137,6 +143,48 @@ Automated quality measurement using three key metrics:
 
 ## 📁 Project Structure
 
-
+```
+advanced-rag-system/
+├── .github/workflows/
+│   ├── ci.yml          # Lint + multi-Python tests + Docker build check
+│   └── cd.yml          # Build & push GHCR image + GitHub Release on tags
+│
+├── src/rag_assistant/
+│   ├── core/
+│   │   ├── retriever.py          ⭐ Hybrid BM25 + Dense + RRF fusion
+│   │   ├── reranker.py           ⭐ Cross-encoder reranking
+│   │   ├── query_handler.py      ⭐ Full advanced pipeline + streaming
+│   │   ├── llm_handler.py        ⭐ OpenAI GPT-4o + Ollama + async stream
+│   │   ├── embedding_generator.py   OpenAI + HuggingFace
+│   │   ├── document_loader.py       PDF / TXT / CSV / MD / DOCX
+│   │   ├── document_splitter.py     Recursive + Semantic chunking
+│   │   └── vector_store_manager.py  ChromaDB client
+│   ├── evaluation/
+│   │   └── ragas_eval.py         ⭐ RAGAS metrics pipeline
+│   ├── pipeline/
+│   │   └── ingestion.py             Full offline ingestion orchestrator
+│   └── utils/
+│       └── config_loader.py         YAML config parser
+│
+├── tests/                        25 unit tests — all passing ✅
+│   ├── conftest.py
+│   ├── test_retriever.py
+│   ├── test_reranker.py
+│   ├── test_query_handler.py
+│   └── test_ingestion.py
+│
+├── dataset/
+│   └── download_dataset.py       Downloads medical Q&A from HuggingFace
+├── scripts/
+│   ├── run_ingest.py             CLI: ingest documents into ChromaDB
+│   └── run_eval.py               CLI: run RAGAS evaluation
+│
+├── config/config.yaml            All configuration (LLM, embeddings, retrieval)
+├── app.py                        FastAPI: /query, /query/stream, /health
+├── docker-compose.yml            ChromaDB + RAG API
+├── Dockerfile
+├── requirements.txt
+└── .env.example
+```
 
 ---

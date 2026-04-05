@@ -6,7 +6,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import AsyncGenerator, Optional
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -116,7 +116,7 @@ def initialize_pipeline() -> None:
             persist_directory=str(Path(__file__).parent / vs_config.get("vector_store_dir", "vector_store/")),
             chroma_server_url=vs_config.get("chroma_server_url"),
         )
-        logger.info("Vector store initialized")
+        logger.info(f"Vector store initialized: {vector_store}")
 
         # Load documents
         data_dir = Path(__file__).parent / "dataset" / "medical"

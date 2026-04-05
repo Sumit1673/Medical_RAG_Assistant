@@ -28,6 +28,7 @@ class HybridRetriever:
         dense_top_k: int = 10,
         sparse_top_k: int = 10,
         rrf_k: int = 60,
+        top_p: Optional[float] = None,
     ) -> None:
         """
         Initialize HybridRetriever.
@@ -35,15 +36,19 @@ class HybridRetriever:
         Args:
             documents: List of documents to index
             embeddings: Embeddings instance for dense retrieval
-            dense_top_k: Number of results from dense search
-            sparse_top_k: Number of results from sparse search
+            dense_top_k: Number of results from dense search (initial broad retrieval)
+            sparse_top_k: Number of results from sparse search (initial broad retrieval)
             rrf_k: RRF parameter (constant from the paper)
+            top_p: Nucleus threshold for RRF output (0-1). If set, selects the
+                   smallest set of docs whose cumulative normalised RRF score
+                   reaches top_p, instead of a fixed-k cutoff.
         """
         self.documents = documents
         self.embeddings = embeddings
         self.dense_top_k = dense_top_k
         self.sparse_top_k = sparse_top_k
         self.rrf_k = rrf_k
+        self.top_p = top_p
 
         # Initialize BM25 retriever
         try:
@@ -63,24 +68,26 @@ class HybridRetriever:
 
         Args:
             query: Query text
-            k: Number of results to return
+            k: Maximum results to return (used when top_p is not set)
 
         Returns:
             List of retrieved documents
         """
         results = []
 
-        # Dense retrieval
+        # Dense retrieval (always top_k — broad initial net)
         dense_results = self._dense_search(query)
 
-        # Sparse retrieval
+        # Sparse retrieval (always top_k — broad initial net)
         sparse_results = self._sparse_search(query)
 
-        # Fuse results using RRF
+        # Fuse results using RRF, applying top_p nucleus filtering if configured
         if sparse_results and self.bm25_available:
-            results = self._rrf_fusion(dense_results, sparse_results, k)
+            results = self._rrf_fusion(
+                dense_results, sparse_results, k, top_p=self.top_p
+            )
         else:
-            # Fallback to dense only
+            # Fallback to dense only — top_k still makes sense here
             logger.warning("Falling back to dense search only")
             results = dense_results[:k]
 
@@ -127,6 +134,7 @@ class HybridRetriever:
         sparse_results: list[Document],
         k: int,
         rrf_k: int = 60,
+        top_p: Optional[float] = None,
     ) -> list[Document]:
         """
         Fuse dense and sparse results using Reciprocal Rank Fusion.
@@ -134,8 +142,11 @@ class HybridRetriever:
         Args:
             dense_results: Results from dense search
             sparse_results: Results from sparse search
-            k: Number of results to return
+            k: Maximum results to return (used when top_p is None)
             rrf_k: RRF parameter (default 60 from paper)
+            top_p: Nucleus threshold (0-1). Selects the smallest set of docs
+                   whose cumulative normalised RRF score >= top_p. When None,
+                   falls back to hard top-k cutoff.
 
         Returns:
             Fused results
@@ -154,18 +165,35 @@ class HybridRetriever:
         for doc_id in all_docs:
             combined_scores[doc_id] = dense_ranks.get(doc_id, 0) + sparse_ranks.get(doc_id, 0)
 
-        # Sort by combined score
+        # Sort by combined score descending
         sorted_ids = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
 
-        # Return top k documents
         result = []
         seen = set()
-        for doc_id, _ in sorted_ids:
-            if doc_id not in seen:
-                result.append(all_docs[doc_id])
-                seen.add(doc_id)
-                if len(result) >= k:
-                    break
+
+        if top_p is not None:
+            # Nucleus filtering: accumulate until cumulative normalised score >= top_p
+            total_score = sum(score for _, score in sorted_ids)
+            cumulative = 0.0
+            for doc_id, score in sorted_ids:
+                if doc_id not in seen:
+                    result.append(all_docs[doc_id])
+                    seen.add(doc_id)
+                    cumulative += score / total_score if total_score > 0 else 1.0
+                    if cumulative >= top_p:
+                        break
+            logger.debug(
+                f"RRF top_p={top_p}: selected {len(result)} docs "
+                f"(cumulative score mass={cumulative:.3f})"
+            )
+        else:
+            # Hard top-k cutoff
+            for doc_id, _ in sorted_ids:
+                if doc_id not in seen:
+                    result.append(all_docs[doc_id])
+                    seen.add(doc_id)
+                    if len(result) >= k:
+                        break
 
         return result
 

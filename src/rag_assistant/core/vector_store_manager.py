@@ -43,11 +43,13 @@ class VectorStoreManager:
         """Initialize ChromaDB vector store."""
         if self.chroma_server_url:
             # Remote ChromaDB client
+            import chromadb
             logger.info(f"Connecting to remote ChromaDB at {self.chroma_server_url}")
+            host = self.chroma_server_url.split("://")[1].split(":")[0]
+            port = int(self.chroma_server_url.split(":")[-1])
+            client = chromadb.HttpClient(host=host, port=port)
             return Chroma(
-                client_type="http",
-                host=self.chroma_server_url.split("://")[1].split(":")[0],
-                port=int(self.chroma_server_url.split(":")[-1]),
+                client=client,
                 collection_name=self.collection_name,
                 embedding_function=self.embeddings,
             )

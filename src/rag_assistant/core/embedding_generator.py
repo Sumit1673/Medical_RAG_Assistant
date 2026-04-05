@@ -66,7 +66,7 @@ class EmbeddingGenerator:
             return HuggingFaceEmbeddings(
                 model_name=self.model_name,
                 model_kwargs={"device": self.device},
-                normalize_embeddings=self.normalize_embeddings,
+                encode_kwargs={"normalize_embeddings": self.normalize_embeddings},
             )
         except ImportError:
             raise ImportError("langchain-huggingface is required for HuggingFace embeddings")

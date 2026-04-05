@@ -62,13 +62,21 @@ class HybridRetriever:
             self.bm25_retriever = None
             self.bm25_available = False
 
-    def retrieve(self, query: str, k: int = 5) -> list[Document]:
+    def retrieve(
+        self,
+        query: str,
+        k: int = 5,
+        metadata_filter: Optional[dict] = None,
+    ) -> list[Document]:
         """
         Retrieve documents using hybrid search.
 
         Args:
             query: Query text
             k: Maximum results to return (used when top_p is not set)
+            metadata_filter: Optional dict of metadata key-value pairs to filter
+                documents before retrieval (AND logic, exact match).
+                Example: {"source": "diabetes.txt"} or {"format": "pdf"}
 
         Returns:
             List of retrieved documents
@@ -76,10 +84,10 @@ class HybridRetriever:
         results = []
 
         # Dense retrieval (always top_k — broad initial net)
-        dense_results = self._dense_search(query)
+        dense_results = self._dense_search(query, metadata_filter=metadata_filter)
 
         # Sparse retrieval (always top_k — broad initial net)
-        sparse_results = self._sparse_search(query)
+        sparse_results = self._sparse_search(query, metadata_filter=metadata_filter)
 
         # Fuse results using RRF, applying top_p nucleus filtering if configured
         if sparse_results and self.bm25_available:
@@ -91,24 +99,61 @@ class HybridRetriever:
             logger.warning("Falling back to dense search only")
             results = dense_results[:k]
 
-        logger.debug(f"Hybrid retrieval returned {len(results)} documents")
+        logger.debug(
+            f"Hybrid retrieval returned {len(results)} documents"
+            + (f" (filter={metadata_filter})" if metadata_filter else "")
+        )
         return results
 
-    def _dense_search(self, query: str) -> list[Document]:
+    @staticmethod
+    def _apply_metadata_filter(
+        documents: list[Document],
+        metadata_filter: Optional[dict],
+    ) -> list[Document]:
+        """
+        Filter documents by metadata key-value pairs (AND logic, exact match).
+
+        Args:
+            documents: Documents to filter
+            metadata_filter: Dict of required metadata key-value pairs.
+                             All pairs must match (AND). None means no filtering.
+
+        Returns:
+            Filtered list of documents
+        """
+        if not metadata_filter:
+            return documents
+        return [
+            doc
+            for doc in documents
+            if all(doc.metadata.get(k) == v for k, v in metadata_filter.items())
+        ]
+
+    def _dense_search(
+        self,
+        query: str,
+        metadata_filter: Optional[dict] = None,
+    ) -> list[Document]:
         """Search using dense embeddings (cosine similarity)."""
         if cosine_similarity is None:
             logger.error("scikit-learn not installed. Run: pip install scikit-learn")
             return []
         try:
+            candidate_docs = self._apply_metadata_filter(
+                self.documents, metadata_filter
+            )
+            if not candidate_docs:
+                return []
+
             query_embedding = self.embeddings.embed_query(query)
             doc_embeddings = self.embeddings.embed_documents(
-                [doc.page_content for doc in self.documents]
+                [doc.page_content for doc in candidate_docs]
             )
             query_vec = np.array(query_embedding).reshape(1, -1)
             doc_vecs = np.array(doc_embeddings)
 
             scores = cosine_similarity(query_vec, doc_vecs)[0]
-            scored_docs = list(zip(self.documents, scores))
+            scored_docs = list(zip(candidate_docs, scores))
             scored_docs.sort(key=lambda x: x[1], reverse=True)
 
             return [doc for doc, _ in scored_docs[: self.dense_top_k]]
@@ -116,13 +161,18 @@ class HybridRetriever:
             logger.error(f"Error in dense search: {e}")
             return []
 
-    def _sparse_search(self, query: str) -> list[Document]:
-        """Search using BM25."""
+    def _sparse_search(
+        self,
+        query: str,
+        metadata_filter: Optional[dict] = None,
+    ) -> list[Document]:
+        """Search using BM25, post-filtered by metadata."""
         if not self.bm25_available or not self.bm25_retriever:
             return []
 
         try:
             results = self.bm25_retriever.invoke(query)
+            results = self._apply_metadata_filter(results, metadata_filter)
             return results[: self.sparse_top_k]
         except Exception as e:
             logger.error(f"Error in sparse search: {e}")
@@ -206,7 +256,10 @@ class HybridRetriever:
         return result
 
     def retrieve_with_scores(
-        self, query: str, k: int = 5
+        self,
+        query: str,
+        k: int = 5,
+        metadata_filter: Optional[dict] = None,
     ) -> list[tuple[Document, float]]:
         """
         Retrieve documents with relevance scores.
@@ -214,6 +267,8 @@ class HybridRetriever:
         Args:
             query: Query text
             k: Number of results
+            metadata_filter: Optional dict of metadata key-value pairs to filter
+                documents before retrieval.
 
         Returns:
             List of (Document, score) tuples
@@ -222,15 +277,21 @@ class HybridRetriever:
             logger.error("scikit-learn not installed. Run: pip install scikit-learn")
             return []
         try:
+            candidate_docs = self._apply_metadata_filter(
+                self.documents, metadata_filter
+            )
+            if not candidate_docs:
+                return []
+
             query_embedding = self.embeddings.embed_query(query)
             doc_embeddings = self.embeddings.embed_documents(
-                [doc.page_content for doc in self.documents]
+                [doc.page_content for doc in candidate_docs]
             )
             query_vec = np.array(query_embedding).reshape(1, -1)
             doc_vecs = np.array(doc_embeddings)
 
             scores = cosine_similarity(query_vec, doc_vecs)[0]  # type: ignore[operator]
-            scored_docs = list(zip(self.documents, scores))
+            scored_docs = list(zip(candidate_docs, scores))
             scored_docs.sort(key=lambda x: x[1], reverse=True)
 
             return scored_docs[:k]

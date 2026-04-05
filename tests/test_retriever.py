@@ -99,3 +99,75 @@ def test_hybrid_retriever_retrieve_fallback_to_dense(sample_documents, mock_embe
             results = retriever.retrieve("heart", k=3)
 
             assert len(results) <= 3
+
+
+# ── Metadata filtering ────────────────────────────────────────────────────────
+
+
+def test_apply_metadata_filter_single_key(sample_documents):
+    """Filter by a single metadata key returns only matching documents."""
+    filtered = HybridRetriever._apply_metadata_filter(
+        sample_documents, {"source": "medical_1.txt"}
+    )
+    assert len(filtered) == 1
+    assert filtered[0].metadata["source"] == "medical_1.txt"
+
+
+def test_apply_metadata_filter_multiple_keys(sample_documents):
+    """Filter by multiple keys applies AND logic."""
+    filtered = HybridRetriever._apply_metadata_filter(
+        sample_documents, {"source": "medical_1.txt", "format": "txt"}
+    )
+    assert len(filtered) == 1
+    assert filtered[0].metadata["source"] == "medical_1.txt"
+
+
+def test_apply_metadata_filter_no_match(sample_documents):
+    """Filter that matches nothing returns an empty list."""
+    filtered = HybridRetriever._apply_metadata_filter(
+        sample_documents, {"source": "nonexistent.pdf"}
+    )
+    assert filtered == []
+
+
+def test_apply_metadata_filter_none_returns_all(sample_documents):
+    """Passing None as filter returns all documents unchanged."""
+    filtered = HybridRetriever._apply_metadata_filter(sample_documents, None)
+    assert filtered == sample_documents
+
+
+def test_apply_metadata_filter_empty_dict_returns_all(sample_documents):
+    """Passing an empty dict returns all documents (no constraints)."""
+    filtered = HybridRetriever._apply_metadata_filter(sample_documents, {})
+    assert filtered == sample_documents
+
+
+def test_retrieve_with_metadata_filter(sample_documents, mock_embeddings):
+    """retrieve() with metadata_filter only returns matching documents."""
+    retriever = HybridRetriever(
+        documents=sample_documents,
+        embeddings=mock_embeddings,
+    )
+    retriever.bm25_available = False
+
+    with patch("rag_assistant.core.retriever.cosine_similarity") as mock_cosine:
+        mock_cosine.return_value = [[0.9]]
+        results = retriever.retrieve(
+            "heart", k=5, metadata_filter={"source": "medical_1.txt"}
+        )
+
+    assert all(doc.metadata["source"] == "medical_1.txt" for doc in results)
+
+
+def test_retrieve_with_filter_no_match_returns_empty(sample_documents, mock_embeddings):
+    """retrieve() returns empty list when filter matches no documents."""
+    retriever = HybridRetriever(
+        documents=sample_documents,
+        embeddings=mock_embeddings,
+    )
+    retriever.bm25_available = False
+
+    results = retriever.retrieve(
+        "heart", k=5, metadata_filter={"source": "nonexistent.pdf"}
+    )
+    assert results == []

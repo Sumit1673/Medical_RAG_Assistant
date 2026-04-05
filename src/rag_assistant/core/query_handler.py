@@ -45,12 +45,14 @@ class QueryHandler:
             f"reranking={enable_reranking}, final_top_k={final_top_k}"
         )
 
-    def answer_query(self, query: str) -> dict:
+    def answer_query(self, query: str, metadata_filter: Optional[dict] = None) -> dict:
         """
         Answer a query using the full advanced pipeline.
 
         Args:
             query: User query
+            metadata_filter: Optional dict of metadata key-value pairs to restrict
+                retrieval to matching documents. Example: {"source": "diabetes.txt"}
 
         Returns:
             Dictionary with answer, rewritten_query, and source documents
@@ -63,7 +65,11 @@ class QueryHandler:
             logger.debug(f"Rewritten: {rewritten_query}")
 
         # Step 2: Hybrid Retrieval
-        candidates = self.retriever.retrieve(rewritten_query, k=self.final_top_k * 2)
+        candidates = self.retriever.retrieve(
+            rewritten_query,
+            k=self.final_top_k * 2,
+            metadata_filter=metadata_filter,
+        )
         logger.debug(f"Retrieved {len(candidates)} candidate documents")
 
         # Step 3: Reranking
@@ -89,12 +95,16 @@ class QueryHandler:
             ],
         }
 
-    async def answer_query_stream(self, query: str) -> AsyncGenerator[str, None]:
+    async def answer_query_stream(
+        self, query: str, metadata_filter: Optional[dict] = None
+    ) -> AsyncGenerator[str, None]:
         """
         Stream answer to a query.
 
         Args:
             query: User query
+            metadata_filter: Optional dict of metadata key-value pairs to restrict
+                retrieval to matching documents.
 
         Yields:
             Answer tokens
@@ -105,7 +115,11 @@ class QueryHandler:
             rewritten_query = self._rewrite_query(query)
 
         # Step 2: Hybrid Retrieval
-        candidates = self.retriever.retrieve(rewritten_query, k=self.final_top_k * 2)
+        candidates = self.retriever.retrieve(
+            rewritten_query,
+            k=self.final_top_k * 2,
+            metadata_filter=metadata_filter,
+        )
 
         # Step 3: Reranking
         if self.enable_reranking and self.reranker:

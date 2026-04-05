@@ -58,6 +58,7 @@ class QueryRequest(BaseModel):
     query: str
     enable_rewriting: Optional[bool] = True
     enable_reranking: Optional[bool] = True
+    metadata_filter: Optional[dict] = None
 
 
 class SourceDocument(BaseModel):
@@ -234,7 +235,9 @@ async def query_endpoint(request: QueryRequest) -> QueryResponse:
 
     try:
         # Process query
-        result = query_handler.answer_query(request.query)
+        result = query_handler.answer_query(
+            request.query, metadata_filter=request.metadata_filter
+        )
 
         # Calculate latency
         latency_ms = (time.time() - start_time) * 1000
@@ -271,7 +274,9 @@ async def query_stream_endpoint(request: QueryRequest):
 
     try:
         # Stream response
-        async for token in query_handler.answer_query_stream(request.query):
+        async for token in query_handler.answer_query_stream(
+            request.query, metadata_filter=request.metadata_filter
+        ):
             yield f"data: {token}\n\n"
 
         yield "data: [DONE]\n\n"

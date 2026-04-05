@@ -16,14 +16,14 @@ from pydantic import BaseModel
 import sys
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from rag_assistant.core.document_loader import DocumentLoader
-from rag_assistant.core.embedding_generator import EmbeddingGenerator
-from rag_assistant.core.llm_handler import LLMHandler
-from rag_assistant.core.query_handler import QueryHandler
-from rag_assistant.core.reranker import CrossEncoderReranker
-from rag_assistant.core.retriever import HybridRetriever
-from rag_assistant.core.vector_store_manager import VectorStoreManager
-from rag_assistant.utils.config_loader import ConfigLoader
+from rag_assistant.core.document_loader import DocumentLoader  # noqa: E402
+from rag_assistant.core.embedding_generator import EmbeddingGenerator  # noqa
+from rag_assistant.core.llm_handler import LLMHandler  # noqa: E402
+from rag_assistant.core.query_handler import QueryHandler  # noqa: E402
+from rag_assistant.core.reranker import CrossEncoderReranker  # noqa: E402
+from rag_assistant.core.retriever import HybridRetriever  # noqa: E402
+from rag_assistant.core.vector_store_manager import VectorStoreManager  # noqa
+from rag_assistant.utils.config_loader import ConfigLoader  # noqa: E402
 
 # Setup logging
 logging.basicConfig(
@@ -35,7 +35,9 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="Advanced RAG System",
-    description="Production-grade RAG with hybrid retrieval, reranking, and streaming",
+    description=(
+        "Production-grade RAG with hybrid retrieval, reranking, and streaming"
+    ),
     version="1.0.0",
 )
 
@@ -49,6 +51,8 @@ app.add_middleware(
 )
 
 # Request/Response models
+
+
 class QueryRequest(BaseModel):
     """Query request model."""
     query: str
@@ -102,18 +106,27 @@ def initialize_pipeline() -> None:
         embedding_config = config.get_section("embedding")
         embeddings = EmbeddingGenerator(
             provider=embedding_config.get("provider", "huggingface"),
-            model_name=embedding_config.get("model_name", "BAAI/bge-small-en-v1.5"),
+            model_name=embedding_config.get(
+                "model_name", "BAAI/bge-small-en-v1.5"
+            ),
             device=embedding_config.get("device", "cpu"),
-            normalize_embeddings=embedding_config.get("normalize_embeddings", True),
+            normalize_embeddings=embedding_config.get(
+                "normalize_embeddings", True
+            ),
         )
-        logger.info(f"Embeddings initialized: {embedding_config.get('model_name')}")
+        logger.info(
+            f"Embeddings initialized: {embedding_config.get('model_name')}"
+        )
 
         # Initialize vector store
         vs_config = config.get_section("vector_store")
         vector_store = VectorStoreManager(
             embeddings=embeddings.embeddings,
             collection_name=vs_config.get("collection_name", "medical_rag"),
-            persist_directory=str(Path(__file__).parent / vs_config.get("vector_store_dir", "vector_store/")),
+            persist_directory=str(
+                Path(__file__).parent
+                / vs_config.get("vector_store_dir", "vector_store/")
+            ),
             chroma_server_url=vs_config.get("chroma_server_url"),
         )
         logger.info(f"Vector store initialized: {vector_store}")
@@ -152,7 +165,9 @@ def initialize_pipeline() -> None:
         # Initialize reranker
         reranker_config = config.get_section("reranker")
         reranker = CrossEncoderReranker(
-            model_name=reranker_config.get("model_name", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
+            model_name=reranker_config.get(
+                "model_name", "cross-encoder/ms-marco-MiniLM-L-6-v2"
+            ),
             top_n=reranker_config.get("top_n", 5),
             top_p=reranker_config.get("top_p"),
         )
@@ -163,7 +178,9 @@ def initialize_pipeline() -> None:
             retriever=retriever,
             llm_handler=llm_handler,
             reranker=reranker,
-            enable_query_rewriting=retrieval_config.get("enable_query_rewriting", True),
+            enable_query_rewriting=retrieval_config.get(
+                "enable_query_rewriting", True
+            ),
             enable_reranking=retrieval_config.get("enable_reranking", True),
             final_top_k=retrieval_config.get("final_top_k", 5),
         )
@@ -174,7 +191,9 @@ def initialize_pipeline() -> None:
             llm_provider=llm_config.get("provider", "ollama"),
             llm_model=llm_config.get("model_name", "mistral"),
             embedding_provider=embedding_config.get("provider", "huggingface"),
-            embedding_model=embedding_config.get("model_name", "BAAI/bge-small-en-v1.5"),
+            embedding_model=embedding_config.get(
+                "model_name", "BAAI/bge-small-en-v1.5"
+            ),
             retrieval_config=retrieval_config,
         )
 

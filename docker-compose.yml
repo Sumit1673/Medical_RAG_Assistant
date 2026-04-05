@@ -1,0 +1,28 @@
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 5s
+      retries: 10
+
+  rag_api:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./config:/app/config:ro
+      - ./dataset:/app/dataset:ro
+
+volumes:
+  chroma_data:

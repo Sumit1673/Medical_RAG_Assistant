@@ -3,7 +3,7 @@
 [![CI](https://github.com/Sumit1673/medical-rag-assistant/.github/workflows/ci.yml/badge.svg)](https://github.com/Sumit1673/medical-rag-assistant/.github/workflows/ci.yml)
 [![CD](https://github.com/Sumit1673/medical-rag-assistant/.github/workflows/cd.yml/badge.svg)](https://github.com/Sumit1673/medical-rag-assistant/.github/workflows/cd.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-32%20passed-brightgreen)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A **production-grade** Retrieval-Augmented Generation (RAG) system that upgrades a basic vector-search pipeline into an advanced, multi-stage architecture — using the same patterns employed by Netflix, Amazon, and Pinecone at scale. For dataset I have created some sample 
@@ -31,6 +31,7 @@ medical dataset.
 | **CI/CD** | None | **GitHub Actions (lint, test, docker)** |
 | **Chunking** | Fixed-size only | **Recursive + Semantic** |
 | **Document formats** | PDF, TXT | **PDF, TXT, CSV, MD, DOCX** |
+| **Filtering** | None | **Metadata filtering (pre-retrieval)** |
 
 ---
 
@@ -139,7 +140,41 @@ es.onmessage = ({ data }) => {
 };
 ```
 
-### 5. RAGAS Evaluation
+### 5. Metadata Filtering
+
+Every document carries metadata (`source`, `format`, `chunk`) attached at ingestion time. You can pass a `metadata_filter` dict to the `/query` endpoint to restrict retrieval to a subset of documents **before** any embedding or BM25 search runs — so the LLM only sees context from matching documents.
+
+Filter logic is **AND + exact match** across all supplied keys:
+
+```bash
+# Only search within a specific file
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the symptoms?",
+    "metadata_filter": {"source": "diabetes_guidelines.txt"}
+  }'
+
+# Restrict to a file format
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Treatment options",
+    "metadata_filter": {"format": "pdf"}
+  }'
+
+# Combine multiple fields (AND)
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Dosage guidelines",
+    "metadata_filter": {"source": "cardiology.pdf", "format": "pdf"}
+  }'
+```
+
+Omitting `metadata_filter` (or passing `null`) searches the full corpus as before.
+
+### 6. RAGAS Evaluation
 Automated quality measurement using three key metrics:
 - **Faithfulness** — Is the answer grounded in context?
 - **Answer Relevancy** — Does the answer address the question?
@@ -172,7 +207,7 @@ advanced-rag-system/
 │   └── utils/
 │       └── config_loader.py         YAML config parser
 │
-├── tests/                        25 unit tests — all passing ✅
+├── tests/                        32 unit tests — all passing ✅
 │   ├── conftest.py
 │   ├── test_retriever.py
 │   ├── test_reranker.py

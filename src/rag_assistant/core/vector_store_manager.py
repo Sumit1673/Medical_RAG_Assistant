@@ -44,6 +44,7 @@ class VectorStoreManager:
         if self.chroma_server_url:
             # Remote ChromaDB client
             import chromadb
+
             logger.info(f"Connecting to remote ChromaDB at {self.chroma_server_url}")
             host = self.chroma_server_url.split("://")[1].split(":")[0]
             port = int(self.chroma_server_url.split(":")[-1])
@@ -91,7 +92,9 @@ class VectorStoreManager:
         logger.debug(f"Similarity search found {len(results)} documents")
         return results
 
-    def similarity_search_with_score(self, query: str, k: int = 5) -> list[tuple[Document, float]]:
+    def similarity_search_with_score(
+        self, query: str, k: int = 5
+    ) -> list[tuple[Document, float]]:
         """
         Search for similar documents with scores.
 

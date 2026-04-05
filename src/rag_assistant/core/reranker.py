@@ -49,7 +49,9 @@ class CrossEncoderReranker:
         self.model = CrossEncoder(model_name)
         logger.info(f"CrossEncoderReranker initialized with model={model_name}")
 
-    def rerank(self, query: str, documents: list[Document]) -> list[tuple[Document, float]]:
+    def rerank(
+        self, query: str, documents: list[Document]
+    ) -> list[tuple[Document, float]]:
         """
         Rerank documents based on relevance to query.
 

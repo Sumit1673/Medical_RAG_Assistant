@@ -104,7 +104,10 @@ def test_query_handler_with_rewriting(mock_retriever, mock_llm_handler):
     result = handler.answer_query("heart disease")
 
     assert result["original_query"] == "heart disease"
-    assert result["rewritten_query"] == "What are the causes and symptoms of heart disease?"
+    assert (
+        result["rewritten_query"]
+        == "What are the causes and symptoms of heart disease?"
+    )
 
 
 def test_query_handler_without_reranking(mock_retriever, mock_llm_handler):
@@ -165,7 +168,9 @@ async def test_query_handler_streaming(mock_retriever, mock_llm_handler):
     assert len(tokens) > 0
 
 
-def test_query_handler_source_documents(mock_retriever, mock_llm_handler, mock_reranker):
+def test_query_handler_source_documents(
+    mock_retriever, mock_llm_handler, mock_reranker
+):
     """Test source documents are included in result."""
     handler = QueryHandler(
         retriever=mock_retriever,

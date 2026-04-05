@@ -69,8 +69,7 @@ def _context_precision_score(contexts: list[str], ground_truth: str) -> float:
     if not gt_tokens:
         return 0.0
     relevant = sum(
-        1 for ctx in contexts
-        if len(_tokenize(ctx) & gt_tokens) / len(gt_tokens) >= 0.2
+        1 for ctx in contexts if len(_tokenize(ctx) & gt_tokens) / len(gt_tokens) >= 0.2
     )
     return relevant / len(contexts)
 
@@ -84,9 +83,15 @@ class RAGASEvaluator:
         metrics: Optional[list[str]] = None,
     ) -> None:
         self.test_data_path = Path(test_data_path)
-        self.metrics = metrics or ["answer_similarity", "faithfulness", "context_precision"]
+        self.metrics = metrics or [
+            "answer_similarity",
+            "faithfulness",
+            "context_precision",
+        ]
         self.test_data = self._load_test_data()
-        logger.info(f"RAGASEvaluator initialized with {len(self.test_data)} test samples")
+        logger.info(
+            f"RAGASEvaluator initialized with {len(self.test_data)} test samples"
+        )
 
     def _load_test_data(self) -> list[dict]:
         """Load evaluation test data."""
@@ -117,21 +122,27 @@ class RAGASEvaluator:
             ground_truth = test_sample.get("answer", "")
 
             try:
-                logger.info(f"Evaluating sample {i + 1}/{len(self.test_data)}: {question[:60]}...")
+                logger.info(
+                    f"Evaluating sample {i + 1}/{len(self.test_data)}: {question[:60]}..."
+                )
                 rag_result = query_handler.answer_query(question)
                 answer = rag_result["answer"]
                 contexts = [doc["content"] for doc in rag_result["source_documents"]]
 
-                results.append({
-                    "question": question,
-                    "ground_truth": ground_truth,
-                    "answer": answer,
-                    "answer_similarity": _rouge1_f1(answer, ground_truth),
-                    "faithfulness": _faithfulness_score(answer, contexts),
-                    "context_precision": _context_precision_score(contexts, ground_truth),
-                    "context_count": len(contexts),
-                    "answer_length": len(answer.split()),
-                })
+                results.append(
+                    {
+                        "question": question,
+                        "ground_truth": ground_truth,
+                        "answer": answer,
+                        "answer_similarity": _rouge1_f1(answer, ground_truth),
+                        "faithfulness": _faithfulness_score(answer, contexts),
+                        "context_precision": _context_precision_score(
+                            contexts, ground_truth
+                        ),
+                        "context_count": len(contexts),
+                        "answer_length": len(answer.split()),
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"Error evaluating sample {i}: {e}")
@@ -141,7 +152,9 @@ class RAGASEvaluator:
         logger.info(f"Evaluation complete: {len(df)} samples evaluated")
         return df
 
-    def save_results(self, results_df: pd.DataFrame, output_path: str = "evaluation_results.json") -> None:
+    def save_results(
+        self, results_df: pd.DataFrame, output_path: str = "evaluation_results.json"
+    ) -> None:
         """Save evaluation results to JSON."""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -169,6 +182,10 @@ class RAGASEvaluator:
             print(f"  {col:<26} {mean_score:>6.3f}  {bar}")
         print("─" * width)
         print(f"  {'Samples evaluated':<26} {len(results_df):>8}")
-        print(f"  {'Avg answer length (words)':<26} {results_df['answer_length'].mean():>8.1f}")
-        print(f"  {'Avg context chunks used':<26} {results_df['context_count'].mean():>8.1f}")
+        print(
+            f"  {'Avg answer length (words)':<26} {results_df['answer_length'].mean():>8.1f}"
+        )
+        print(
+            f"  {'Avg context chunks used':<26} {results_df['context_count'].mean():>8.1f}"
+        )
         print("═" * width + "\n")

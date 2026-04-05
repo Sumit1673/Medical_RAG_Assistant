@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -12,9 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Setup sys.path
-import sys
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent / "src"))  # setup sys.path
 
 from rag_assistant.core.document_loader import DocumentLoader  # noqa: E402
 from rag_assistant.core.embedding_generator import EmbeddingGenerator  # noqa
@@ -55,6 +54,7 @@ app.add_middleware(
 
 class QueryRequest(BaseModel):
     """Query request model."""
+
     query: str
     enable_rewriting: Optional[bool] = True
     enable_reranking: Optional[bool] = True
@@ -62,6 +62,7 @@ class QueryRequest(BaseModel):
 
 class SourceDocument(BaseModel):
     """Source document model."""
+
     content: str
     source: str
     rerank_score: Optional[float] = None
@@ -69,6 +70,7 @@ class SourceDocument(BaseModel):
 
 class QueryResponse(BaseModel):
     """Query response model."""
+
     request_id: str
     answer: str
     original_query: str
@@ -79,6 +81,7 @@ class QueryResponse(BaseModel):
 
 class PipelineInfo(BaseModel):
     """Pipeline information model."""
+
     llm_provider: str
     llm_model: str
     embedding_provider: str
@@ -106,17 +109,11 @@ def initialize_pipeline() -> None:
         embedding_config = config.get_section("embedding")
         embeddings = EmbeddingGenerator(
             provider=embedding_config.get("provider", "huggingface"),
-            model_name=embedding_config.get(
-                "model_name", "BAAI/bge-small-en-v1.5"
-            ),
+            model_name=embedding_config.get("model_name", "BAAI/bge-small-en-v1.5"),
             device=embedding_config.get("device", "cpu"),
-            normalize_embeddings=embedding_config.get(
-                "normalize_embeddings", True
-            ),
+            normalize_embeddings=embedding_config.get("normalize_embeddings", True),
         )
-        logger.info(
-            f"Embeddings initialized: {embedding_config.get('model_name')}"
-        )
+        logger.info(f"Embeddings initialized: {embedding_config.get('model_name')}")
 
         # Initialize vector store
         vs_config = config.get_section("vector_store")
@@ -178,9 +175,7 @@ def initialize_pipeline() -> None:
             retriever=retriever,
             llm_handler=llm_handler,
             reranker=reranker,
-            enable_query_rewriting=retrieval_config.get(
-                "enable_query_rewriting", True
-            ),
+            enable_query_rewriting=retrieval_config.get("enable_query_rewriting", True),
             enable_reranking=retrieval_config.get("enable_reranking", True),
             final_top_k=retrieval_config.get("final_top_k", 5),
         )

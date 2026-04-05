@@ -152,18 +152,26 @@ class HybridRetriever:
             Fused results
         """
         # Create rank dictionaries
-        dense_ranks = {doc.metadata.get("source", str(i)): 1.0 / (rrf_k + i + 1)
-                       for i, doc in enumerate(dense_results)}
-        sparse_ranks = {doc.metadata.get("source", str(i)): 1.0 / (rrf_k + i + 1)
-                        for i, doc in enumerate(sparse_results)}
+        dense_ranks = {
+            doc.metadata.get("source", str(i)): 1.0 / (rrf_k + i + 1)
+            for i, doc in enumerate(dense_results)
+        }
+        sparse_ranks = {
+            doc.metadata.get("source", str(i)): 1.0 / (rrf_k + i + 1)
+            for i, doc in enumerate(sparse_results)
+        }
 
         # Combine scores
         combined_scores = {}
-        all_docs = {doc.metadata.get("source", str(i)): doc
-                    for i, doc in enumerate(dense_results + sparse_results)}
+        all_docs = {
+            doc.metadata.get("source", str(i)): doc
+            for i, doc in enumerate(dense_results + sparse_results)
+        }
 
         for doc_id in all_docs:
-            combined_scores[doc_id] = dense_ranks.get(doc_id, 0) + sparse_ranks.get(doc_id, 0)
+            combined_scores[doc_id] = dense_ranks.get(doc_id, 0) + sparse_ranks.get(
+                doc_id, 0
+            )
 
         # Sort by combined score descending
         sorted_ids = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
@@ -197,7 +205,9 @@ class HybridRetriever:
 
         return result
 
-    def retrieve_with_scores(self, query: str, k: int = 5) -> list[tuple[Document, float]]:
+    def retrieve_with_scores(
+        self, query: str, k: int = 5
+    ) -> list[tuple[Document, float]]:
         """
         Retrieve documents with relevance scores.
 

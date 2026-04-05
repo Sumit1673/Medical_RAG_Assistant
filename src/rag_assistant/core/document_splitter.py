@@ -100,7 +100,9 @@ class DocumentSplitter:
                         chunk_count += 1
 
                         # Add overlap by keeping last sentence
-                        overlap_text = " ".join(sentences[-2:]) if len(sentences) > 1 else sentence
+                        overlap_text = (
+                            " ".join(sentences[-2:]) if len(sentences) > 1 else sentence
+                        )
                         current_chunk = overlap_text + " "
 
                     current_chunk += sentence + " "
@@ -114,7 +116,9 @@ class DocumentSplitter:
                     )
                 )
 
-        logger.info(f"Semantically split {len(documents)} documents into {len(split_docs)} chunks")
+        logger.info(
+            f"Semantically split {len(documents)} documents into {len(split_docs)} chunks"
+        )
         return split_docs
 
     @staticmethod

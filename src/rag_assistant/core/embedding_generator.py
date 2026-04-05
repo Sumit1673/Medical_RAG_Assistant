@@ -69,7 +69,9 @@ class EmbeddingGenerator:
                 encode_kwargs={"normalize_embeddings": self.normalize_embeddings},
             )
         except ImportError:
-            raise ImportError("langchain-huggingface is required for HuggingFace embeddings")
+            raise ImportError(
+                "langchain-huggingface is required for HuggingFace embeddings"
+            )
 
     def embed_query(self, query: str) -> list[float]:
         """

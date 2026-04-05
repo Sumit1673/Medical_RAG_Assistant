@@ -44,7 +44,10 @@ class DocumentLoader:
 
         documents = []
         for file_path in directory.rglob("*"):
-            if file_path.is_file() and file_path.suffix.lower() in DocumentLoader.SUPPORTED_FORMATS:
+            if (
+                file_path.is_file()
+                and file_path.suffix.lower() in DocumentLoader.SUPPORTED_FORMATS
+            ):
                 try:
                     docs = DocumentLoader.load_file(file_path)
                     documents.extend(docs)
@@ -99,7 +102,9 @@ class DocumentLoader:
     def _load_pdf(file_path: Path) -> list[Document]:
         """Load PDF file."""
         if PdfReader is None:
-            raise ImportError("pypdf is required for PDF support. Install with: pip install pypdf")
+            raise ImportError(
+                "pypdf is required for PDF support. Install with: pip install pypdf"
+            )
 
         documents = []
         reader = PdfReader(file_path)
@@ -157,7 +162,9 @@ class DocumentLoader:
     def _load_docx(file_path: Path) -> list[Document]:
         """Load DOCX file."""
         if DocxDocument is None:
-            raise ImportError("python-docx is required for DOCX support. Install with: pip install python-docx")
+            raise ImportError(
+                "python-docx is required for DOCX support. Install with: pip install python-docx"
+            )
 
         doc = DocxDocument(file_path)
         content = "\n".join([paragraph.text for paragraph in doc.paragraphs])

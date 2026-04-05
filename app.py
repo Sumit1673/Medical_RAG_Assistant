@@ -134,6 +134,7 @@ def initialize_pipeline() -> None:
             embeddings=embeddings.embeddings,
             dense_top_k=retrieval_config.get("dense_top_k", 10),
             sparse_top_k=retrieval_config.get("sparse_top_k", 10),
+            top_p=retrieval_config.get("top_p"),
         )
         logger.info("Retriever initialized")
 
@@ -153,6 +154,7 @@ def initialize_pipeline() -> None:
         reranker = CrossEncoderReranker(
             model_name=reranker_config.get("model_name", "cross-encoder/ms-marco-MiniLM-L-6-v2"),
             top_n=reranker_config.get("top_n", 5),
+            top_p=reranker_config.get("top_p"),
         )
         logger.info("Reranker initialized")
 
@@ -247,8 +249,8 @@ async def query_endpoint(request: QueryRequest) -> QueryResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/query/stream")
-async def query_stream_endpoint(request: QueryRequest) -> AsyncGenerator[str, None]:
+@app.post("/query/stream", response_model=None)
+async def query_stream_endpoint(request: QueryRequest):
     """Streaming query endpoint."""
     if not query_handler:
         raise HTTPException(status_code=503, detail="Pipeline not initialized")

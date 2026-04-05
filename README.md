@@ -348,6 +348,11 @@ python scripts/run_eval.py
   context_precision  :  0.85
 ══════════════════════════════════════
 Results saved → evaluation_results.json
+
+What each score means:                                                                                                                                              
+  - answer_similarity — ROUGE-1 F1 between your answer and the ground truth (expect lower with LLMs since they paraphrase)                                          
+  - faithfulness — how much of the answer is grounded in the retrieved context (higher = less hallucination)                                                          
+  - context_precision — how many retrieved chunks actually contain relevant information (higher = retrieval is on-target)
 ```
 
 ---
